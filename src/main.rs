@@ -50,7 +50,7 @@ fn run_external(words: Vec<&str>) -> bool {
 
 fn _run_external_cmd(path: &str, words: Vec<&str>) -> bool {
     let mut cmd = std::process::Command::new(path);
-    let output = cmd.args(&words[1..]).output();
+    let output = cmd.args(&words).output();
     match output {
         Ok(output) => {
             io::stdout().write_all(&output.stdout).unwrap();
@@ -72,6 +72,9 @@ fn check_path(cmd: &str) -> bool {
 }
 
 fn get_cmd_path(cmd: &str) -> Option<String> {
+    if cmd.starts_with("/") {
+        return Some(cmd.to_string());
+    }
     match env::var("PATH") {
         Ok(paths) => {
             for path in paths.split(':') {

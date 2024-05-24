@@ -22,6 +22,11 @@ fn run(input: &str) -> () {
     match words[0] {
         "exit" => std::process::exit(words[1].parse().unwrap()),
         "echo" => println!("{}", words[1..].join(" ")),
+        "type" => if ["exit", "echo", "type"].contains(&words[1]) {
+            println!("{} is a shell builtin", words[1])
+        } else {
+            println!("{}: command not found", words[1])
+        },
         _ => println!("{}: command not found", input)
     }
 }

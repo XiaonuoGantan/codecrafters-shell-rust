@@ -1,5 +1,4 @@
 use std::env;
-#[allow(unused_imports)]
 use std::io::{self, Write};
 
 fn main() {
@@ -10,48 +9,37 @@ fn main() {
         print!("$ ");
         io::stdout().flush().unwrap();
         stdin.read_line(&mut input).unwrap();
-        run(&input.trim());
+        run(input.trim());
         input.clear();
     }
 }
 
-/**
- * Try to run the command `input` if it's predefined, otherwise print an error message.
- */
-fn run(input: &str) -> () {
-    let words = input.split_whitespace().collect::<Vec<&str>>();
-    match words[0] {
-        "exit" => std::process::exit(words[1].parse().unwrap()),
-        "echo" => println!("{}", words[1..].join(" ")),
-        "type" => {
-            if ["exit", "echo", "type"].contains(&words[1]) {
-                println!("{} is a shell builtin", words[1])
-            } else {
-                if !check_path(words[1]) {
-                    println!("{} not found", words[1])
-                }
+fn run(input: &str) {
+    let words: Vec<&str> = input.split_whitespace().collect();
+    match words.as_slice() {
+        ["exit", code] => std::process::exit(code.parse().unwrap_or(0)),
+        ["echo", args @ ..] => println!("{}", args.join(" ")),
+        ["type", cmd] if ["exit", "echo", "type"].contains(cmd) => println!("{} is a shell builtin", cmd),
+        ["type", cmd] => {
+            if !check_path(cmd) {
+                println!("{} not found", cmd);
             }
         }
-        _ => {
-            if !run_external(words) {
-                println!("{}: command not found", input)
+        [cmd, args @ ..] => {
+            if !run_external(cmd, args) {
+                println!("{}: command not found", input);
             }
         }
+        _ => {}
     }
 }
 
-fn run_external(words: Vec<&str>) -> bool {
-    let cmd_path = get_cmd_path(words[0]);
-    match cmd_path {
-        Some(path) => _run_external_cmd(&path, words[1..].to_vec()),
-        None => false,
-    }
+fn run_external(cmd: &str, args: &[&str]) -> bool {
+    get_cmd_path(cmd).map_or(false, |path| _run_external_cmd(&path, args))
 }
 
-fn _run_external_cmd(path: &str, words: Vec<&str>) -> bool {
-    let mut cmd = std::process::Command::new(path);
-    let output = cmd.args(&words).output();
-    match output {
+fn _run_external_cmd(path: &str, args: &[&str]) -> bool {
+    match std::process::Command::new(path).args(args).output() {
         Ok(output) => {
             io::stdout().write_all(&output.stdout).unwrap();
             io::stderr().write_all(&output.stderr).unwrap();
@@ -62,29 +50,25 @@ fn _run_external_cmd(path: &str, words: Vec<&str>) -> bool {
 }
 
 fn check_path(cmd: &str) -> bool {
-    match get_cmd_path(cmd) {
-        Some(path) => {
-            println!("{} is in {}", cmd, path);
-            true
-        }
-        None => false,
-    }
+    get_cmd_path(cmd).map_or(false, |path| {
+        println!("{} is in {}", cmd, path);
+        true
+    })
 }
 
 fn get_cmd_path(cmd: &str) -> Option<String> {
-    if cmd.starts_with("/") {
-        return Some(cmd.to_string());
-    }
-    match env::var("PATH") {
-        Ok(paths) => {
-            for path in paths.split(':') {
-                let path = format!("{}/{}", path, cmd);
-                if std::path::Path::new(&path).exists() {
-                    return Some(path);
+    if cmd.starts_with('/') {
+        Some(cmd.to_string())
+    } else {
+        env::var("PATH").ok().and_then(|paths| {
+            paths.split(':').find_map(|path| {
+                let full_path = format!("{}/{}", path, cmd);
+                if std::path::Path::new(&full_path).exists() {
+                    Some(full_path)
+                } else {
+                    None
                 }
-            }
-            None
-        }
-        _ => None,
+            })
+        })
     }
 }

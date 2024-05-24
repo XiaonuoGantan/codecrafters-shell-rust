@@ -1,6 +1,6 @@
+use std::env;
 #[allow(unused_imports)]
 use std::io::{self, Write};
-use std::env;
 
 fn main() {
     let stdin = io::stdin();
@@ -32,22 +32,56 @@ fn run(input: &str) -> () {
                 }
             }
         }
-        _ => println!("{}: command not found", input),
+        _ => {
+            if !run_external(words) {
+                println!("{}: command not found", input)
+            }
+        }
+    }
+}
+
+fn run_external(words: Vec<&str>) -> bool {
+    let cmd_path = get_cmd_path(words[0]);
+    match cmd_path {
+        Some(path) => _run_external_cmd(&path, words[1..].to_vec()),
+        None => false,
+    }
+}
+
+fn _run_external_cmd(path: &str, words: Vec<&str>) -> bool {
+    let mut cmd = std::process::Command::new(path);
+    let output = cmd.args(&words[1..]).output();
+    match output {
+        Ok(output) => {
+            io::stdout().write_all(&output.stdout).unwrap();
+            io::stderr().write_all(&output.stderr).unwrap();
+            true
+        }
+        Err(_) => false,
     }
 }
 
 fn check_path(cmd: &str) -> bool {
-    match (env::var("PATH"), cmd) {
-        (Ok(paths), cmd) => {
+    match get_cmd_path(cmd) {
+        Some(path) => {
+            println!("{} is in {}", cmd, path);
+            true
+        }
+        None => false,
+    }
+}
+
+fn get_cmd_path(cmd: &str) -> Option<String> {
+    match env::var("PATH") {
+        Ok(paths) => {
             for path in paths.split(':') {
                 let path = format!("{}/{}", path, cmd);
                 if std::path::Path::new(&path).exists() {
-                    println!("{} is in {}", cmd, path);
-                    return true;
+                    return Some(path);
                 }
             }
-            false
+            None
         }
-        _ => false,
+        _ => None,
     }
 }

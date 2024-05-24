@@ -21,6 +21,7 @@ fn run(input: &str) -> () {
     let words = input.split_whitespace().collect::<Vec<&str>>();
     match words[0] {
         "exit" => std::process::exit(words[1].parse().unwrap()),
+        "echo" => println!("{}", words[1..].join(" ")),
         _ => println!("{}: command not found", input)
     }
 }

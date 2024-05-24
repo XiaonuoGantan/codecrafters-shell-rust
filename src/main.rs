@@ -9,11 +9,18 @@ fn main() {
         print!("$ ");
         io::stdout().flush().unwrap();
         stdin.read_line(&mut input).unwrap();
-        check_existence(&input.trim());
+        run(&input.trim());
+        input.clear();
     }
 }
 
-/** Check if the input cmd exists in the predefined list of commands of the shell */
-fn check_existence(input: &str) -> () {
-    println!("{}: command not found", input)
+/** 
+ * Try to run the command `input` if it's predefined, otherwise print an error message.
+ */
+fn run(input: &str) -> () {
+    let words = input.split_whitespace().collect::<Vec<&str>>();
+    match words[0] {
+        "exit" => std::process::exit(words[1].parse().unwrap()),
+        _ => println!("{}: command not found", input)
+    }
 }
